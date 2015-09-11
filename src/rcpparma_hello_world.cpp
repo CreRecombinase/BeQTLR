@@ -78,8 +78,8 @@ arma::umat GenBoot(const int samplesize, const int bootstrapnumber){
 // [[Rcpp::export]]
 arma::mat BeQTL(const arma::mat & A, const arma::mat & B, const arma::umat & Bootmat){
   int bsi= Bootmat.n_rows;
+  Rcpp::Rcout<<"Starting Bootstrap!"<<std::endl;
   arma::mat C(A.n_cols*B.n_cols,Bootmat.n_rows);
-
   arma::mat tA(A.n_rows,A.n_cols);
   arma::mat tB(B.n_rows,B.n_cols);
   arma::mat tC(A.n_rows,B.n_rows);
@@ -87,11 +87,25 @@ arma::mat BeQTL(const arma::mat & A, const arma::mat & B, const arma::umat & Boo
     tA = A.rows(Bootmat.row(i));
     tB = B.rows(Bootmat.row(i));
     tC = cor(tA,tB);
-    tC.elem(find_nonfinite(tC)).zeros();
     C.col(i) = vectorise(tC,0);
   }
+  C.elem(find_nonfinite(C)).zeros();
 
  return reshape(median(C,1),A.n_cols,B.n_cols);
+}
+
+// [[Rcpp::export]]
+arma::mat BeQTL2(const arma::mat & A, const arma::mat & B, const arma::umat & Bootmat){
+  int bsi= Bootmat.n_rows;
+  arma::mat C(A.n_cols*B.n_cols,Bootmat.n_rows);
+  arma::mat tC(A.n_rows,B.n_rows);
+  for(int i=0; i<bsi; i++){
+    tC = cor(A.rows(Bootmat.row(i)),B.rows(Bootmat.row(i)));
+    C.col(i) = vectorise(tC,0);
+  }
+  C.elem(find_nonfinite(C)).zeros();
+
+  return reshape(median(C,1),A.n_cols,B.n_cols);
 }
 
 template<typename T>
