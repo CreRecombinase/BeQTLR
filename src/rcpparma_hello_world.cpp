@@ -40,17 +40,22 @@ arma::mat RMSE(const arma::Mat<double> & TrainCor, const arma::Mat<double> & Tes
 
 //Function to estimate Median and Mean Absolute Deviation from point estimate, bootstrap estiamte, and heldout estimate
 // [[Rcpp::export]]
-arma::vec MAD(const arma::mat & TrainCor, const arma::mat & TestCor,bool isMedian, const Rcpp::NumericVector & dim){
+arma::mat MAD(const arma::mat & TrainCor, const arma::mat & TestCor,bool isMedian, const arma::ivec  dim){
   //First generate the abs error
-  arma::mat errmat = abs(TrainCor-TestCor);
-  arma::vec mad(TrainCor.n_rows);
+
+  arma::mat errmat = arma::abs(TrainCor-TestCor);
+
+  arma::vec madvec(TrainCor.n_rows);
   if(isMedian){
-    mad = median(errmat,1);
+    madvec = arma::median(errmat,1);
   }
   else{
-    mad = mean(errmat,1);
+    madvec = arma::mean(errmat,1);
   }
-  mad.reshape(dim[0],dim[1]);
+
+  int rownum = arma::as_scalar(dim[0]);
+  int colnum = arma::as_scalar(dim[1]);
+  arma::mat mad = arma::reshape(madvec,rownum,colnum);
   return(mad);
 }
 
@@ -92,29 +97,77 @@ arma::mat BeQTL(const arma::mat & A, const arma::mat & B, const arma::umat & Boo
 template<typename T>
 T mod(T a, int n)
 {
-  return a- arma::floor(a/n)*n;
+  return a - arma::floor(a/n)*n;
 }
+
 
 //Function to return row and column indices given a matrix and vectorized indices
 // [[Rcpp::export]]
-arma::mat Ind(const int nrow, const int ncol, const arma::uvec & ind){
-  arma::mat rc(ind.n_elem,2);
-  arma::uvec::const_iterator b = ind.begin();
-  arma::uvec::const_iterator e = ind.end();
-  int it=0;
-  rc.col(0)= floor(ind/nrow);
-  rc.col(1)= mod(ind,nrow)
+arma::umat Ind(const int nrow, const arma::uvec & ind){
+  arma::umat rc(ind.n_elem,2);
+  rc.col(0)= mod(ind,nrow);
+  rc.col(1)= arma::floor(ind/nrow);
 
-  rc.col(0) = ind
+
+  return(rc);
+
 }
+
+// [[Rcpp::export]]
+arma::mat Nind(const arma::mat inpmat,const arma::uvec rowindex,const arma::uvec colindex){
+  arma::mat copmat = inpmat(rowindex,colindex);
+  return copmat;
+
+}
+
+
 
 //Function to summarize results from BeQTL and return a dataframe
 // [[Rcpp::export]]
-Rcpp::DataFrame SumRes(const arma::mat  & cormat, const arma::mat & errmat, const Rcpp::CharacterVector cortype, const Rcpp::CharacterVector errtype, const Rcpp::DataFrame SnpDF, const Rcpp::DataFrame Genedf, const int samplesize, const double tcutoff){
-
+Rcpp::DataFrame SumRes(const arma::mat  & cormat, const arma::mat & errmat, const Rcpp::DataFrame SnpDF, const Rcpp::DataFrame Genedf, const int samplesize, const double tcutoff){
+  Rcpp::Rcout<<"Generating Tmat"<<std::endl;
   arma::mat tmat = sqrt(samplesize-2)*(cormat/(sqrt(1-square(cormat))));
+  Rcpp::Rcout<<"Finding strong t"<<std::endl;
   arma::uvec goods = find(abs(tmat)>tcutoff);
+  Rcpp::Rcout<<"Generating matrix index"<<std::endl;
+  arma::umat goodmat = Ind(tmat.n_rows,goods);
+  Rcpp::Rcout<<"Subsetting tmat"<<std::endl;
+  Rcpp::Rcout<<"This many good results"<<goodmat.n_rows<<std::endl;
+  arma::vec tvec = tmat(goods);
+  Rcpp::Rcout<<"Subsetting Errmat"<<std::endl;
+  arma::vec errvec = errmat(goods);
+  Rcpp::Rcout<<"Generating SNP and Gene lists"<<std::endl;
+  Rcpp::IntegerVector GoodGenes = Rcpp::wrap(arma::conv_to<arma::ivec>::from(goodmat.col(0)));
+  Rcpp::IntegerVector GoodSNPs = Rcpp::wrap(arma::conv_to<arma::ivec>::from(goodmat.col(1)));
 
+//Subset SNP anno
+
+  Rcpp::CharacterVector SNPnames = SnpDF["rsid"];
+  SNPnames = SNPnames[GoodSNPs];
+  arma::ivec SNPchr = Rcpp::as<arma::ivec>(SnpDF["Chrom"]);
+  SNPchr = SNPchr(goodmat.col(1));
+  arma::ivec SNPpos = Rcpp::as<arma::ivec>(SnpDF["Pos"]);
+  SNPpos = SNPpos(goodmat.col(1));
+//Subset Geneanno
+  Rcpp::CharacterVector GeneNames = Genedf["Symbol"];
+  GeneNames = GeneNames[GoodGenes];
+  arma::ivec Genechr = Rcpp::as<arma::ivec>(Genedf["Chrom"]);
+  Genechr = Genechr(goodmat.col(0));
+  arma::ivec Genestart = Rcpp::as<arma::ivec>(Genedf["Start"]);
+  Genestart = Genestart(goodmat.col(0));
+  arma::ivec Genestop = Rcpp::as<arma::ivec>(Genedf["Stop"]);
+  Genestop = Genestop(goodmat.col(0));
+
+  arma::ivec CisDist(GoodGenes.length());
+  Rcpp::Rcout<<"Calculating Cisdist"<<std::endl;
+  CisDist = arma::min(arma::join_cols(abs(Genestop-SNPpos),abs(Genestart-SNPpos)),1);
+  Rcpp::Rcout<<"CisDist Calculated"<<std::endl;
+  CisDist.elem(find(Genechr!=SNPchr)).fill(-1);
+  return  Rcpp::DataFrame::create(Rcpp::Named("SNP")=SNPnames,
+                                  Rcpp::Named("Gene")=GeneNames,
+                                  Rcpp::Named("t-stat")=Rcpp::wrap(tvec),
+                                  Rcpp::Named("err")=Rcpp::wrap(errvec),
+                                  Rcpp::Named("CisDist")=Rcpp::wrap(CisDist));
 
 }
 

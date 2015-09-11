@@ -9,8 +9,8 @@ RMSE <- function(TrainCor, TestCor, dim) {
     .Call('BeQTLR_RMSE', PACKAGE = 'BeQTLR', TrainCor, TestCor, dim)
 }
 
-MAD <- function(TrainCor, TestCor, isMedian) {
-    .Call('BeQTLR_MAD', PACKAGE = 'BeQTLR', TrainCor, TestCor, isMedian)
+MAD <- function(TrainCor, TestCor, isMedian, dim) {
+    .Call('BeQTLR_MAD', PACKAGE = 'BeQTLR', TrainCor, TestCor, isMedian, dim)
 }
 
 PointCor <- function(A, B) {
@@ -23,5 +23,17 @@ GenBoot <- function(samplesize, bootstrapnumber) {
 
 BeQTL <- function(A, B, Bootmat) {
     .Call('BeQTLR_BeQTL', PACKAGE = 'BeQTLR', A, B, Bootmat)
+}
+
+Ind <- function(nrow, ind) {
+    .Call('BeQTLR_Ind', PACKAGE = 'BeQTLR', nrow, ind)
+}
+
+Nind <- function(inpmat, rowindex, colindex) {
+    .Call('BeQTLR_Nind', PACKAGE = 'BeQTLR', inpmat, rowindex, colindex)
+}
+
+SumRes <- function(cormat, errmat, SnpDF, Genedf, samplesize, tcutoff) {
+    .Call('BeQTLR_SumRes', PACKAGE = 'BeQTLR', cormat, errmat, SnpDF, Genedf, samplesize, tcutoff)
 }
 

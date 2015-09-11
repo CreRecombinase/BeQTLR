@@ -33,15 +33,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // MAD
-arma::vec MAD(const arma::mat& TrainCor, const arma::mat& TestCor, bool isMedian);
-RcppExport SEXP BeQTLR_MAD(SEXP TrainCorSEXP, SEXP TestCorSEXP, SEXP isMedianSEXP) {
+arma::mat MAD(const arma::mat& TrainCor, const arma::mat& TestCor, bool isMedian, const arma::ivec dim);
+RcppExport SEXP BeQTLR_MAD(SEXP TrainCorSEXP, SEXP TestCorSEXP, SEXP isMedianSEXP, SEXP dimSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< const arma::mat& >::type TrainCor(TrainCorSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type TestCor(TestCorSEXP);
     Rcpp::traits::input_parameter< bool >::type isMedian(isMedianSEXP);
-    __result = Rcpp::wrap(MAD(TrainCor, TestCor, isMedian));
+    Rcpp::traits::input_parameter< const arma::ivec >::type dim(dimSEXP);
+    __result = Rcpp::wrap(MAD(TrainCor, TestCor, isMedian, dim));
     return __result;
 END_RCPP
 }
@@ -79,6 +80,47 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type B(BSEXP);
     Rcpp::traits::input_parameter< const arma::umat& >::type Bootmat(BootmatSEXP);
     __result = Rcpp::wrap(BeQTL(A, B, Bootmat));
+    return __result;
+END_RCPP
+}
+// Ind
+arma::umat Ind(const int nrow, const arma::uvec& ind);
+RcppExport SEXP BeQTLR_Ind(SEXP nrowSEXP, SEXP indSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< const int >::type nrow(nrowSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type ind(indSEXP);
+    __result = Rcpp::wrap(Ind(nrow, ind));
+    return __result;
+END_RCPP
+}
+// Nind
+arma::mat Nind(const arma::mat inpmat, const arma::uvec rowindex, const arma::uvec colindex);
+RcppExport SEXP BeQTLR_Nind(SEXP inpmatSEXP, SEXP rowindexSEXP, SEXP colindexSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< const arma::mat >::type inpmat(inpmatSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec >::type rowindex(rowindexSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec >::type colindex(colindexSEXP);
+    __result = Rcpp::wrap(Nind(inpmat, rowindex, colindex));
+    return __result;
+END_RCPP
+}
+// SumRes
+Rcpp::DataFrame SumRes(const arma::mat& cormat, const arma::mat& errmat, const Rcpp::DataFrame SnpDF, const Rcpp::DataFrame Genedf, const int samplesize, const double tcutoff);
+RcppExport SEXP BeQTLR_SumRes(SEXP cormatSEXP, SEXP errmatSEXP, SEXP SnpDFSEXP, SEXP GenedfSEXP, SEXP samplesizeSEXP, SEXP tcutoffSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< const arma::mat& >::type cormat(cormatSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type errmat(errmatSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::DataFrame >::type SnpDF(SnpDFSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::DataFrame >::type Genedf(GenedfSEXP);
+    Rcpp::traits::input_parameter< const int >::type samplesize(samplesizeSEXP);
+    Rcpp::traits::input_parameter< const double >::type tcutoff(tcutoffSEXP);
+    __result = Rcpp::wrap(SumRes(cormat, errmat, SnpDF, Genedf, samplesize, tcutoff));
     return __result;
 END_RCPP
 }
